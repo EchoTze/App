@@ -1,3 +1,4 @@
-streamlit==1.26.0
-pandas==2.1.1
-pyecharts==2.0.0
+streamlit>=1.26.0
+pandas>=2.0.0
+pyecharts>=2.0.0
+pyecharts-jupyter-installer>=0.2.0
