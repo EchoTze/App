@@ -4,6 +4,8 @@ from pyecharts.globals import ThemeType
 import streamlit as st
 import pandas as pd
 import os
+import math
+
 
 # 定义颜色，使用对比度大且亮度不高的颜色
 line_colors = ['#8B0000', '#006400', '#00008B', '#8B8B00', '#8B008B', '#008B8B', '#FF8C00', '#4B0082']
@@ -68,12 +70,39 @@ def process_sheet(sheet_name):
     return df, date_column, category_mapping, selected_column, chart_type, fourth_row, fifth_row, sixth_row
 
 
-# 时间序列图函数
+# 新增辅助函数
+def calculate_yaxis_limits(data, padding_ratio=0.05):
+    """计算带扩展范围的整数坐标轴"""
+    valid_data = data.dropna()
+    if valid_data.empty:
+        return 0, 1, 1
+
+    data_min = valid_data.min()
+    data_max = valid_data.max()
+    data_range = data_max - data_min
+
+    # 计算扩展范围
+    padding = padding_ratio * data_range
+    data_min -= padding
+    data_max += padding
+
+    # 取整到合适的整数范围
+    min_round = math.floor(data_min)
+    max_round = math.ceil(data_max)
+
+    # 计算合理的间隔
+    interval = max(1, (max_round - min_round) // 5)
+
+    return min_round, max_round, interval
+
+
+# 修改时间序列图函数
 def create_time_series_chart(df, date_column, selected_column):
-    # 为所选列创建独立的 DataFrame
     single_df = df[[date_column, selected_column]].dropna()
-    # 按日期排序，确保越往 x 轴右轴数据越新
     single_df = single_df.sort_values(by=date_column)
+
+    # 计算坐标轴范围
+    y_min, y_max, interval = calculate_yaxis_limits(single_df[selected_column])
 
     line = (
         Line(init_opts=opts.InitOpts(theme=ThemeType.LIGHT, width="1000px", height="800px"))
@@ -84,18 +113,21 @@ def create_time_series_chart(df, date_column, selected_column):
             title_opts=opts.TitleOpts(title=f"{selected_column} 时间序列图"),
             toolbox_opts=opts.ToolboxOpts(is_show=True),
             xaxis_opts=opts.AxisOpts(name="日期"),
-            yaxis_opts=opts.AxisOpts(name=selected_column),
+            yaxis_opts=opts.AxisOpts(
+                name=selected_column,
+                min_=y_min,
+                max_=y_max,
+                interval=interval
+            ),
             datazoom_opts=[opts.DataZoomOpts(type_="slider", xaxis_index=0, range_start=0, range_end=100)]
         )
     )
     return line
 
 
-# 季节性图表函数
+# 修改季节性图表函数
 def create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_row):
-    # 为所选列创建独立的 DataFrame
     single_df = df[[date_column, selected_column]].dropna()
-
     single_df['年份'] = single_df[date_column].dt.year.astype(int)
     years = sorted(single_df['年份'].unique(), reverse=True)
 
@@ -123,13 +155,32 @@ def create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_ro
         x_axis_name = '月份（1 - 12）'
         x_axis_values = list(range(1, 13))
 
+    all_y_values = []
+    for year in years:
+        if '日' in fifth_row[list(fourth_row).index(selected_column)]:
+            year_data = single_df[(single_df['年份'] == year)].groupby('日序')[selected_column].mean()
+        elif '周' in fifth_row[list(fourth_row).index(selected_column)]:
+            year_data = single_df[(single_df['年份'] == year)].groupby('周序')[selected_column].mean()
+        else:
+            year_data = single_df[(single_df['年份'] == year)].groupby('月序')[selected_column].mean()
+        y_values = [year_data.get(x, None) for x in x_axis_values]
+        all_y_values.extend([y for y in y_values if y is not None])
+
+    # 计算坐标轴范围
+    y_min, y_max, interval = calculate_yaxis_limits(pd.Series(all_y_values))
+
     line = (
         Line(init_opts=opts.InitOpts(theme=ThemeType.LIGHT, width="1000px", height="800px"))
         .set_global_opts(
             title_opts=opts.TitleOpts(title=f"{selected_column} 季节性图表"),
             toolbox_opts=opts.ToolboxOpts(is_show=True),
             xaxis_opts=opts.AxisOpts(name=x_axis_name),
-            yaxis_opts=opts.AxisOpts(name=selected_column),
+            yaxis_opts=opts.AxisOpts(
+                name=selected_column,
+                min_=y_min,
+                max_=y_max,
+                interval=interval
+            ),
             legend_opts=opts.LegendOpts(is_show=True, type_="scroll", pos_bottom="1%", pos_left="center")
         )
     )
@@ -175,4 +226,5 @@ with col2:
     # 显示数据描述
     description = sixth_row[list(fourth_row).index(selected_column)]
     st.markdown(f"<small>数据描述：{description}</small>", unsafe_allow_html=True)
+    
     
