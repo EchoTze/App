@@ -1,15 +1,15 @@
 import streamlit as st
-print("Before st.set_page_config()")
+# 确保 st.set_page_config() 是第一个 Streamlit 命令
 st.set_page_config(layout="wide")
-print("After st.set_page_config()")
 
-# 后续代码保持不变
 from pyecharts import options as opts
 from pyecharts.charts import Line
 from pyecharts.globals import ThemeType
 import pandas as pd
 import os
 import math
+from pptx import Presentation
+from pptx.util import Inches
 
 # 定义颜色，使用对比度大且亮度不高的颜色
 line_colors = ['#8B0000', '#006400', '#00008B', '#8B8B00', '#8B008B', '#008B8B', '#FF8C00', '#4B0082']
@@ -26,8 +26,6 @@ excel_file = read_excel_file()
 # 获取所有表名
 sheet_names = excel_file.sheet_names
 
-# Streamlit 布局
-st.set_page_config(layout="wide")
 col1, col2 = st.columns([1, 3])
 
 # 缓存数据处理函数
@@ -224,16 +222,41 @@ with col1:
         year_range_options = ["5年", "8年", "全部"]
         selected_year_range = st.selectbox("选择展示的年份范围", year_range_options, index=0)
 
+    # 新增：保存到 PPT 按钮
+    save_to_ppt = st.button("保存到 PPT")
+
 with col2:
-    for selected_column in selected_columns:
-        if chart_type == "季节性图表":
-            chart = create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_row, selected_year_range)
-        else:
-            chart = create_time_series_chart(df, date_column, selected_column)
-        st.components.v1.html(chart.render_embed(), height=800)
+    if save_to_ppt:
+        prs = Presentation()
+        for selected_column in selected_columns:
+            if chart_type == "季节性图表":
+                chart = create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_row, selected_year_range)
+            else:
+                chart = create_time_series_chart(df, date_column, selected_column)
+            chart.render(f"{selected_column}.png")
 
-        # 显示数据描述
-        description = sixth_row[list(fourth_row).index(selected_column)]
-        st.markdown(f"<small>数据描述：{description}</small>", unsafe_allow_html=True)
+            slide = prs.slides.add_slide(prs.slide_layouts[5])
+            title = slide.shapes.title
+            title.text = f"{selected_column} 图表"
+            left = Inches(1)
+            top = Inches(2)
+            pic = slide.shapes.add_picture(f"{selected_column}.png", left, top, width=Inches(8), height=Inches(6))
 
+            # 显示数据描述
+            description = sixth_row[list(fourth_row).index(selected_column)]
+            slide.placeholders[1].text = f"数据描述：{description}"
+
+        prs.save("charts.pptx")
+        st.success("图表已保存到 charts.pptx")
+    else:
+        for selected_column in selected_columns:
+            if chart_type == "季节性图表":
+                chart = create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_row, selected_year_range)
+            else:
+                chart = create_time_series_chart(df, date_column, selected_column)
+            st.components.v1.html(chart.render_embed(), height=800)
+
+            # 显示数据描述
+            description = sixth_row[list(fourth_row).index(selected_column)]
+            st.markdown(f"<small>数据描述：{description}</small>", unsafe_allow_html=True)
     
