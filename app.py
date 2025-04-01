@@ -202,7 +202,8 @@ def create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_ro
 
 # 新增函数，将 HTML 转换为 JPG
 def html_to_jpg(html_path, jpg_path):
-    service = Service('path/to/chromedriver')  # 请替换为你的 ChromeDriver 路径
+    # 替换为你的 ChromeDriver 路径
+    service = Service('/path/to/chromedriver')  # 例如：Service('./chromedriver')
     driver = webdriver.Chrome(service=service)
     driver.get(f'file://{html_path}')
     time.sleep(5)  # 等待页面加载
