@@ -235,14 +235,17 @@ with col2:
             else:
                 chart = create_time_series_chart(df, date_column, selected_column)
             try:
-                chart.render(f"{selected_column}.png")
-                if not os.path.exists(f"{selected_column}.png"):
-                    st.error(f"图片 {selected_column}.png 保存失败，文件未找到。")
+                image_path = f"{selected_column}.png"
+                chart.render(image_path)
+                if not os.path.exists(image_path):
+                    st.error(f"图片 {image_path} 保存失败，文件未找到。")
                     continue
                 # 检查图片文件是否有效
-                Image.open(f"{selected_column}.png")
+                img = Image.open(image_path)
+                img.verify()
+                st.info(f"图片 {image_path} 保存成功，文件大小: {os.path.getsize(image_path)} 字节。")
             except Exception as e:
-                st.error(f"保存或检查图片 {selected_column}.png 失败: {e}")
+                st.error(f"保存或检查图片 {image_path} 失败: {e}")
                 continue
 
             try:
@@ -251,13 +254,13 @@ with col2:
                 title.text = f"{selected_column} 图表"
                 left = Inches(1)
                 top = Inches(2)
-                pic = slide.shapes.add_picture(f"{selected_column}.png", left, top, width=Inches(8), height=Inches(6))
+                pic = slide.shapes.add_picture(image_path, left, top, width=Inches(8), height=Inches(6))
 
                 # 显示数据描述
                 description = sixth_row[list(fourth_row).index(selected_column)]
                 slide.placeholders[1].text = f"数据描述：{description}"
             except Exception as e:
-                st.error(f"插入图片 {selected_column}.png 到 PPT 失败: {e}")
+                st.error(f"插入图片 {image_path} 到 PPT 失败: {e}")
 
         try:
             prs.save("charts.pptx")
