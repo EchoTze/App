@@ -5,3 +5,6 @@ openpyxl
 python-pptx
 selenium
 pillow
+pptx
+io
+webdriver_manager.chrome
