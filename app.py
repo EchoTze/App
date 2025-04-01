@@ -236,10 +236,13 @@ with col2:
                 chart = create_time_series_chart(df, date_column, selected_column)
             try:
                 chart.render(f"{selected_column}.png")
+                if not os.path.exists(f"{selected_column}.png"):
+                    st.error(f"图片 {selected_column}.png 保存失败，文件未找到。")
+                    continue
                 # 检查图片文件是否有效
                 Image.open(f"{selected_column}.png")
             except Exception as e:
-                st.error(f"保存图片 {selected_column}.png 失败: {e}")
+                st.error(f"保存或检查图片 {selected_column}.png 失败: {e}")
                 continue
 
             try:
@@ -272,3 +275,4 @@ with col2:
             # 显示数据描述
             description = sixth_row[list(fourth_row).index(selected_column)]
             st.markdown(f"<small>数据描述：{description}</small>", unsafe_allow_html=True)
+    
