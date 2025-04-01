@@ -204,6 +204,8 @@ def create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_ro
 
 # HTML 转 PNG 函数
 def html_to_png(html_content, output_path):
+    temp_html_path = None  # 初始化 temp_html_path
+    driver = None  # 初始化 driver
     try:
         # 指定 ChromeDriver 版本，需要根据实际 Chrome 版本修改
         service = Service(ChromeDriverManager(version="114.0.5735.90").install())
@@ -224,11 +226,11 @@ def html_to_png(html_content, output_path):
     except Exception as e:
         print(f"Error converting HTML to PNG: {e}")
     finally:
-        if 'driver' in locals():
+        if driver:
             # 关闭浏览器
             driver.quit()
-        # 删除临时 HTML 文件
-        if os.path.exists(temp_html_path):
+        if temp_html_path and os.path.exists(temp_html_path):
+            # 删除临时 HTML 文件
             os.remove(temp_html_path)
 
 
