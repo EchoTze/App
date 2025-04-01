@@ -9,6 +9,9 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 import time
+from pptx import Presentation
+from pptx.util import Inches
+import io
 
 # 定义颜色，使用对比度大且亮度不高的颜色
 line_colors = ['#8B0000', '#006400', '#00008B', '#8B8B00', '#8B008B', '#008B8B', '#FF8C00', '#4B0082']
@@ -19,7 +22,6 @@ def read_excel_file():
     file_path = os.path.join(os.path.dirname(__file__), '沥青数据豆包3.xlsx')
     excel_file = pd.ExcelFile(file_path)
     return excel_file
-
 
 excel_file = read_excel_file()
 
@@ -64,7 +66,6 @@ def process_sheet(sheet_name):
 
     return df, date_column, category_mapping, fourth_row, fifth_row, sixth_row
 
-
 # 新增辅助函数
 def calculate_yaxis_limits(data, padding_ratio=0.05):
     """计算带扩展范围的整数坐标轴"""
@@ -90,7 +91,6 @@ def calculate_yaxis_limits(data, padding_ratio=0.05):
 
     return min_round, max_round, interval
 
-
 # 缓存时间序列图函数
 @st.cache_data
 def create_time_series_chart(df, date_column, selected_column):
@@ -101,7 +101,7 @@ def create_time_series_chart(df, date_column, selected_column):
     y_min, y_max, interval = calculate_yaxis_limits(single_df[selected_column])
 
     line = (
-        Line(init_opts=opts.InitOpts(theme=ThemeType.LIGHT, width="1000px", height="800px", bg_color="white"))
+        Line(init_opts=opts.InitOpts(theme=ThemeType.LIGHT, width="1000px", height="800px", bg_color="white"))  # 明确设置背景颜色
         .add_xaxis(single_df[date_column].dt.strftime('%Y-%m-%d').tolist())
         .add_yaxis(selected_column, single_df[selected_column].tolist(), is_smooth=True,
                    label_opts=opts.LabelOpts(is_show=False))
@@ -119,7 +119,6 @@ def create_time_series_chart(df, date_column, selected_column):
         )
     )
     return line
-
 
 # 缓存季节性图表函数
 @st.cache_data
@@ -161,7 +160,7 @@ def create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_ro
     y_min, y_max, interval = calculate_yaxis_limits(pd.Series(all_y_values))
 
     line = (
-        Line(init_opts=opts.InitOpts(theme=ThemeType.LIGHT, width="1000px", height="800px", bg_color="white"))
+        Line(init_opts=opts.InitOpts(theme=ThemeType.LIGHT, width="1000px", height="800px", bg_color="white"))  # 明确设置背景颜色
         .set_global_opts(
             title_opts=opts.TitleOpts(title=f"{selected_column} 季节性图表"),
             toolbox_opts=opts.ToolboxOpts(is_show=True),
@@ -201,28 +200,28 @@ def create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_ro
         )
     return line
 
-
 # HTML 转 PNG 函数
 def html_to_png(html_content, output_path):
-    temp_html_path = None  # 初始化 temp_html_path
-    driver = None  # 初始化 driver
+    temp_html_path = None
+    driver = None
     try:
         # 指定 ChromeDriver 版本，需要根据实际 Chrome 版本修改
         service = Service(ChromeDriverManager(version="114.0.5735.90").install())
         driver = webdriver.Chrome(service=service)
         # 将 HTML 内容保存为临时文件
-        temp_html_path = "temp_chart.html"
+        temp_html_path = os.path.join(os.getcwd(), "temp_chart.html")
         with open(temp_html_path, "w", encoding="utf-8") as f:
             f.write(html_content)
 
         # 打开临时 HTML 文件
-        driver.get(f"file:///{os.path.abspath(temp_html_path)}")
+        driver.get(f"file:///{temp_html_path}")
 
         # 等待页面加载完成
         time.sleep(5)
 
         # 保存为 PNG
         driver.save_screenshot(output_path)
+        print(f"成功生成 PNG 文件: {output_path}")
     except Exception as e:
         print(f"Error converting HTML to PNG: {e}")
     finally:
@@ -232,7 +231,6 @@ def html_to_png(html_content, output_path):
         if temp_html_path and os.path.exists(temp_html_path):
             # 删除临时 HTML 文件
             os.remove(temp_html_path)
-
 
 with col1:
     # 选择 Sheet 名
@@ -262,39 +260,37 @@ with col1:
 
     # 导出 PPT 按钮
     if st.button("导出选中图表到 PPT"):
-        from pptx import Presentation
-        from pptx.util import Inches
-        import io
-
         prs = Presentation()
         for selected_column in selected_columns:
             if chart_type == "季节性图表":
-                chart = create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_row,
-                                              selected_year_range)
+                chart = create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_row, selected_year_range)
             else:
                 chart = create_time_series_chart(df, date_column, selected_column)
 
             html_content = chart.render_embed()
-            output_path = f"{selected_column}_{chart_type}.png"
+            output_path = os.path.join(os.getcwd(), f"{selected_column}_{chart_type}.png")
             html_to_png(html_content, output_path)
 
-            # 创建新的幻灯片
-            slide = prs.slides.add_slide(prs.slide_layouts[1])
-            title = slide.shapes.title
-            body_shape = slide.shapes.placeholders[1]
+            if os.path.exists(output_path):
+                # 创建新的幻灯片
+                slide = prs.slides.add_slide(prs.slide_layouts[1])
+                title = slide.shapes.title
+                body_shape = slide.shapes.placeholders[1]
 
-            # 设置幻灯片标题
-            title.text = f"{selected_column} {chart_type}"
+                # 设置幻灯片标题
+                title.text = f"{selected_column} {chart_type}"
 
-            # 添加图表图片到幻灯片
-            left = Inches(1)
-            top = Inches(1.5)
-            pic = slide.shapes.add_picture(output_path, left, top, width=Inches(8), height=Inches(6))
+                # 添加图表图片到幻灯片
+                left = Inches(1)
+                top = Inches(1.5)
+                pic = slide.shapes.add_picture(output_path, left, top, width=Inches(8), height=Inches(6))
 
-            # 显示数据描述
-            description = sixth_row[list(fourth_row).index(selected_column)]
-            tf = body_shape.text_frame
-            tf.text = f"数据描述：{description}"
+                # 显示数据描述
+                description = sixth_row[list(fourth_row).index(selected_column)]
+                tf = body_shape.text_frame
+                tf.text = f"数据描述：{description}"
+            else:
+                print(f"未找到 PNG 文件: {output_path}")
 
         # 保存 PPT 文件
         buffer = io.BytesIO()
@@ -312,8 +308,7 @@ with col1:
 with col2:
     for selected_column in selected_columns:
         if chart_type == "季节性图表":
-            chart = create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_row,
-                                          selected_year_range)
+            chart = create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_row, selected_year_range)
         else:
             chart = create_time_series_chart(df, date_column, selected_column)
         html_content = chart.render_embed()
@@ -324,7 +319,9 @@ with col2:
         st.markdown(f"<small>数据描述：{description}</small>", unsafe_allow_html=True)
 
         # 转换为 PNG
-        output_path = f"{selected_column}_{chart_type}.png"
+        output_path = os.path.join(os.getcwd(), f"{selected_column}_{chart_type}.png")
         html_to_png(html_content, output_path)
-        st.success(f"已将 {selected_column} 的 {chart_type} 转换为 PNG: {output_path}")
-
+        if os.path.exists(output_path):
+            st.success(f"已将 {selected_column} 的 {chart_type} 转换为 PNG: {output_path}")
+        else:
+            st.error(f"未能将 {selected_column} 的 {chart_type} 转换为 PNG")
