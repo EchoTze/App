@@ -235,10 +235,14 @@ with col2:
             else:
                 chart = create_time_series_chart(df, date_column, selected_column)
             try:
-                image_path = f"{selected_column}.png"
+                image_path = os.path.abspath(f"{selected_column}.png")
                 chart.render(image_path)
                 if not os.path.exists(image_path):
                     st.error(f"图片 {image_path} 保存失败，文件未找到。")
+                    continue
+                # 检查文件权限
+                if not os.access(image_path, os.R_OK):
+                    st.error(f"没有权限读取图片 {image_path}。")
                     continue
                 # 检查图片文件是否有效
                 img = Image.open(image_path)
@@ -260,13 +264,13 @@ with col2:
                 description = sixth_row[list(fourth_row).index(selected_column)]
                 slide.placeholders[1].text = f"数据描述：{description}"
             except Exception as e:
-                st.error(f"插入图片 {image_path} 到 PPT 失败: {e}")
+                st.error(f"插入图片 {image_path} 到 PPT 失败: {e}，请检查图片是否损坏、路径是否正确或库的兼容性。")
 
         try:
             prs.save("charts.pptx")
             st.success("图表已保存到 charts.pptx")
         except Exception as e:
-            st.error(f"保存 PPT 失败: {e}")
+            st.error(f"保存 PPT 失败: {e}，请检查磁盘空间是否充足。")
     else:
         for selected_column in selected_columns:
             if chart_type == "季节性图表":
