@@ -4,3 +4,4 @@ pyecharts>=2.0.0
 openpyxl
 python-pptx
 selenium
+pillow
