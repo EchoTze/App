@@ -157,7 +157,7 @@ def create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_ro
     line = (
         Line(init_opts=opts.InitOpts(theme=ThemeType.LIGHT, width="1000px", height="800px"))
         .set_global_opts(
-            title_opts=opts.TitleOpts(title=f"{selected_column} 季节性图表", textstyle_opts=opts.TextStyleOpts(font_size=20)),
+            title_opts=opts.TitleOpts(title=f"{selected_column} 季节性图表", font_size=20),
             toolbox_opts=opts.ToolboxOpts(is_show=True),
             xaxis_opts=opts.AxisOpts(name=x_axis_name),
             yaxis_opts=opts.AxisOpts(
