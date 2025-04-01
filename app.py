@@ -6,13 +6,17 @@ import pandas as pd
 import os
 import math
 
-
 # 定义颜色，使用对比度大且亮度不高的颜色
 line_colors = ['#8B0000', '#006400', '#00008B', '#8B8B00', '#8B008B', '#008B8B', '#FF8C00', '#4B0082']
 
-# 读取 Excel 文件
-file_path = os.path.join(os.path.dirname(__file__), '沥青数据豆包3.xlsx')
-excel_file = pd.ExcelFile(file_path)
+# 缓存 Excel 文件读取
+@st.cache_data
+def read_excel_file():
+    file_path = os.path.join(os.path.dirname(__file__), '沥青数据豆包3.xlsx')
+    excel_file = pd.ExcelFile(file_path)
+    return excel_file
+
+excel_file = read_excel_file()
 
 # 获取所有表名
 sheet_names = excel_file.sheet_names
@@ -21,7 +25,8 @@ sheet_names = excel_file.sheet_names
 st.set_page_config(layout="wide")
 col1, col2 = st.columns([1, 3])
 
-
+# 缓存数据处理函数
+@st.cache_data
 def process_sheet(sheet_name):
     df = excel_file.parse(sheet_name, header=4)  # 从第 5 行开始加载数据
     headers = excel_file.parse(sheet_name, nrows=6)  # 加载前 6 行作为表头
@@ -52,23 +57,7 @@ def process_sheet(sheet_name):
 
     category_labels1 = set([label[0] for label in category_mapping.values()])
 
-    # 选择第一行数据标签
-    selected_category1 = st.selectbox(f"选择 {sheet_name} 的第一行数据标签", category_labels1)
-
-    # 根据第一行标签筛选第二行细分标签
-    available_labels2 = [label[1] for col, label in category_mapping.items() if label[0] == selected_category1]
-    selected_category2 = st.selectbox(f"选择 {sheet_name} 的第二行细分标签", set(available_labels2))
-
-    # 根据前两个选择筛选指标名称
-    available_columns = [col for col, label in category_mapping.items() if
-                         label[0] == selected_category1 and label[1] == selected_category2]
-    selected_column = st.selectbox(f"选择 {sheet_name} 的指标名称", available_columns)
-
-    # 选择图表类型
-    chart_type = st.selectbox(f"选择 {sheet_name} 的图表类型", ["时间序列图", "季节性图表"])
-
-    return df, date_column, category_mapping, selected_column, chart_type, fourth_row, fifth_row, sixth_row
-
+    return df, date_column, category_mapping, fourth_row, fifth_row, sixth_row
 
 # 新增辅助函数
 def calculate_yaxis_limits(data, padding_ratio=0.05):
@@ -95,8 +84,8 @@ def calculate_yaxis_limits(data, padding_ratio=0.05):
 
     return min_round, max_round, interval
 
-
-# 修改时间序列图函数
+# 缓存时间序列图函数
+@st.cache_data
 def create_time_series_chart(df, date_column, selected_column):
     single_df = df[[date_column, selected_column]].dropna()
     single_df = single_df.sort_values(by=date_column)
@@ -105,7 +94,7 @@ def create_time_series_chart(df, date_column, selected_column):
     y_min, y_max, interval = calculate_yaxis_limits(single_df[selected_column])
 
     line = (
-        Line(init_opts=opts.InitOpts(theme=ThemeType.LIGHT, width="1200px", height="800px"))
+        Line(init_opts=opts.InitOpts(theme=ThemeType.LIGHT, width="1000px", height="800px"))
         .add_xaxis(single_df[date_column].dt.strftime('%Y-%m-%d').tolist())
         .add_yaxis(selected_column, single_df[selected_column].tolist(), is_smooth=True,
                    label_opts=opts.LabelOpts(is_show=False))
@@ -124,8 +113,8 @@ def create_time_series_chart(df, date_column, selected_column):
     )
     return line
 
-
-# 修改季节性图表函数
+# 缓存季节性图表函数
+@st.cache_data
 def create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_row):
     single_df = df[[date_column, selected_column]].dropna()
     single_df['年份'] = single_df[date_column].dt.year.astype(int)
@@ -170,7 +159,7 @@ def create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_ro
     y_min, y_max, interval = calculate_yaxis_limits(pd.Series(all_y_values))
 
     line = (
-        Line(init_opts=opts.InitOpts(theme=ThemeType.LIGHT, width="1200px", height="800px"))
+        Line(init_opts=opts.InitOpts(theme=ThemeType.LIGHT, width="1000px", height="800px"))
         .set_global_opts(
             title_opts=opts.TitleOpts(title=f"{selected_column} 季节性图表"),
             toolbox_opts=opts.ToolboxOpts(is_show=True),
@@ -209,12 +198,26 @@ def create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_ro
         )
     return line
 
-
 with col1:
     # 选择 Sheet 名
     selected_sheet = st.selectbox("选择 Sheet 名", sheet_names)
-    df, date_column, category_mapping, selected_column, chart_type, fourth_row, fifth_row, sixth_row = process_sheet(
-        selected_sheet)
+    df, date_column, category_mapping, fourth_row, fifth_row, sixth_row = process_sheet(selected_sheet)
+
+    # 选择第一行数据标签
+    category_labels1 = set([label[0] for label in category_mapping.values()])
+    selected_category1 = st.selectbox(f"选择 {selected_sheet} 的第一行数据标签", category_labels1)
+
+    # 根据第一行标签筛选第二行细分标签
+    available_labels2 = [label[1] for col, label in category_mapping.items() if label[0] == selected_category1]
+    selected_category2 = st.selectbox(f"选择 {selected_sheet} 的第二行细分标签", set(available_labels2))
+
+    # 根据前两个选择筛选指标名称
+    available_columns = [col for col, label in category_mapping.items() if
+                         label[0] == selected_category1 and label[1] == selected_category2]
+    selected_column = st.selectbox(f"选择 {selected_sheet} 的指标名称", available_columns)
+
+    # 选择图表类型
+    chart_type = st.selectbox(f"选择 {selected_sheet} 的图表类型", ["时间序列图", "季节性图表"])
 
 with col2:
     if chart_type == "季节性图表":
@@ -226,5 +229,3 @@ with col2:
     # 显示数据描述
     description = sixth_row[list(fourth_row).index(selected_column)]
     st.markdown(f"<small>数据描述：{description}</small>", unsafe_allow_html=True)
-    
-    
