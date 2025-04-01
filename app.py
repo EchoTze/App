@@ -5,6 +5,9 @@ import streamlit as st
 import pandas as pd
 import os
 import math
+from pptx import Presentation
+from pptx.util import Inches
+import io
 
 # 定义颜色，使用对比度大且亮度不高的颜色
 line_colors = ['#8B0000', '#006400', '#00008B', '#8B8B00', '#8B008B', '#008B8B', '#FF8C00', '#4B0082']
@@ -219,6 +222,55 @@ with col1:
         year_range_options = ["5年", "8年", "全部"]
         selected_year_range = st.selectbox("选择展示的年份范围", year_range_options, index=0)
 
+    # 导出 PPT 按钮
+    if st.button("导出选中图表到 PPT"):
+        prs = Presentation()
+        for selected_column in selected_columns:
+            if chart_type == "季节性图表":
+                chart = create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_row, selected_year_range)
+            else:
+                chart = create_time_series_chart(df, date_column, selected_column)
+
+            # 保存图表为 HTML 文件
+            chart.render(f"{selected_column}.html")
+
+            # 使用 PhantomJS 或其他工具将 HTML 转换为图片（这里假设你已经安装了相关工具）
+            # 这里简单模拟图片保存，实际需要实现 HTML 到图片的转换
+            # 例如使用 Selenium 和 ChromeDriver 进行截图
+            # 这里暂时省略图片转换代码
+
+            # 创建新的幻灯片
+            slide = prs.slides.add_slide(prs.slide_layouts[1])
+            title = slide.shapes.title
+            body_shape = slide.shapes.placeholders[1]
+
+            # 设置幻灯片标题
+            title.text = f"{selected_column} {chart_type}"
+
+            # 添加图表图片到幻灯片（这里假设图片已经保存为 selected_column.png）
+            # 实际需要根据 HTML 转换的图片路径进行修改
+            left = Inches(1)
+            top = Inches(1.5)
+            pic = slide.shapes.add_picture(f"{selected_column}.png", left, top, width=Inches(8), height=Inches(6))
+
+            # 显示数据描述
+            description = sixth_row[list(fourth_row).index(selected_column)]
+            tf = body_shape.text_frame
+            tf.text = f"数据描述：{description}"
+
+        # 保存 PPT 文件
+        buffer = io.BytesIO()
+        prs.save(buffer)
+        buffer.seek(0)
+
+        # 提供下载链接
+        st.download_button(
+            label="下载 PPT",
+            data=buffer,
+            file_name="charts.pptx",
+            mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        )
+
 with col2:
     for selected_column in selected_columns:
         if chart_type == "季节性图表":
@@ -230,4 +282,3 @@ with col2:
         # 显示数据描述
         description = sixth_row[list(fourth_row).index(selected_column)]
         st.markdown(f"<small>数据描述：{description}</small>", unsafe_allow_html=True)
-
