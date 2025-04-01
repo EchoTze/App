@@ -2,3 +2,4 @@ streamlit>=1.26.0
 pandas>=2.0.0
 pyecharts>=2.0.0
 openpyxl
+python-pptx
