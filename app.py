@@ -283,7 +283,10 @@ with col1:
                 # 添加图表图片到幻灯片
                 left = Inches(1)
                 top = Inches(1.5)
-                pic = slide.shapes.add_picture(output_path, left, top, width=Inches(8), height=Inches(6))
+                try:
+                    pic = slide.shapes.add_picture(output_path, left, top, width=Inches(8), height=Inches(6))
+                except Exception as e:
+                    print(f"添加图片到幻灯片时出错: {e}")
 
                 # 显示数据描述
                 description = sixth_row[list(fourth_row).index(selected_column)]
@@ -294,16 +297,18 @@ with col1:
 
         # 保存 PPT 文件
         buffer = io.BytesIO()
-        prs.save(buffer)
-        buffer.seek(0)
-
-        # 提供下载链接
-        st.download_button(
-            label="下载 PPT",
-            data=buffer,
-            file_name="charts.pptx",
-            mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
-        )
+        try:
+            prs.save(buffer)
+            buffer.seek(0)
+            # 提供下载链接
+            st.download_button(
+                label="下载 PPT",
+                data=buffer,
+                file_name="charts.pptx",
+                mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            )
+        except Exception as e:
+            print(f"保存 PPT 到缓冲区时出错: {e}")
 
 with col2:
     for selected_column in selected_columns:
