@@ -197,6 +197,11 @@ def create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_ro
         )
     return line
 
+# 指定 ChromeDriver 的路径
+chromedriver_path = '/path/to/chromedriver'
+service = Service(chromedriver_path)
+driver = webdriver.Chrome(service=service)
+
 # HTML 转 PNG 函数
 def html_to_png(html_content, output_path):
     service = Service(ChromeDriverManager().install())
