@@ -8,6 +8,8 @@ import math
 from pptx import Presentation
 from pptx.util import Inches
 import io
+from selenium import webdriver
+from webdriver_manager.chrome import ChromeDriverManager
 
 # 定义颜色，使用对比度大且亮度不高的颜色
 line_colors = ['#8B0000', '#006400', '#00008B', '#8B8B00', '#8B008B', '#008B8B', '#FF8C00', '#4B0082']
@@ -196,6 +198,14 @@ def create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_ro
         )
     return line
 
+# 新增 HTML 转 PNG 函数
+def html_to_png(html_path, png_path):
+    driver = webdriver.Chrome(ChromeDriverManager().install())
+    driver.get(f"file://{os.path.abspath(html_path)}")
+    driver.set_window_size(1000, 800)
+    driver.save_screenshot(png_path)
+    driver.quit()
+
 with col1:
     # 选择 Sheet 名
     selected_sheet = st.selectbox("选择 Sheet 名", sheet_names)
@@ -232,12 +242,12 @@ with col1:
                 chart = create_time_series_chart(df, date_column, selected_column)
 
             # 保存图表为 HTML 文件
-            chart.render(f"{selected_column}.html")
+            html_path = f"{selected_column}.html"
+            chart.render(html_path)
 
-            # 使用 PhantomJS 或其他工具将 HTML 转换为图片（这里假设你已经安装了相关工具）
-            # 这里简单模拟图片保存，实际需要实现 HTML 到图片的转换
-            # 例如使用 Selenium 和 ChromeDriver 进行截图
-            # 这里暂时省略图片转换代码
+            # 将 HTML 转换为 PNG
+            png_path = f"{selected_column}.png"
+            html_to_png(html_path, png_path)
 
             # 创建新的幻灯片
             slide = prs.slides.add_slide(prs.slide_layouts[1])
@@ -247,11 +257,10 @@ with col1:
             # 设置幻灯片标题
             title.text = f"{selected_column} {chart_type}"
 
-            # 添加图表图片到幻灯片（这里假设图片已经保存为 selected_column.png）
-            # 实际需要根据 HTML 转换的图片路径进行修改
+            # 添加图表图片到幻灯片
             left = Inches(1)
             top = Inches(1.5)
-            pic = slide.shapes.add_picture(f"{selected_column}.png", left, top, width=Inches(8), height=Inches(6))
+            pic = slide.shapes.add_picture(png_path, left, top, width=Inches(8), height=Inches(6))
 
             # 显示数据描述
             description = sixth_row[list(fourth_row).index(selected_column)]
