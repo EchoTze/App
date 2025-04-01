@@ -10,6 +10,7 @@ import os
 import math
 from pptx import Presentation
 from pptx.util import Inches
+from PIL import Image  # 导入 Pillow 库
 
 # 定义颜色，使用对比度大且亮度不高的颜色
 line_colors = ['#8B0000', '#006400', '#00008B', '#8B8B00', '#8B008B', '#008B8B', '#FF8C00', '#4B0082']
@@ -233,21 +234,33 @@ with col2:
                 chart = create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_row, selected_year_range)
             else:
                 chart = create_time_series_chart(df, date_column, selected_column)
-            chart.render(f"{selected_column}.png")
+            try:
+                chart.render(f"{selected_column}.png")
+                # 检查图片文件是否有效
+                Image.open(f"{selected_column}.png")
+            except Exception as e:
+                st.error(f"保存图片 {selected_column}.png 失败: {e}")
+                continue
 
-            slide = prs.slides.add_slide(prs.slide_layouts[5])
-            title = slide.shapes.title
-            title.text = f"{selected_column} 图表"
-            left = Inches(1)
-            top = Inches(2)
-            pic = slide.shapes.add_picture(f"{selected_column}.png", left, top, width=Inches(8), height=Inches(6))
+            try:
+                slide = prs.slides.add_slide(prs.slide_layouts[5])
+                title = slide.shapes.title
+                title.text = f"{selected_column} 图表"
+                left = Inches(1)
+                top = Inches(2)
+                pic = slide.shapes.add_picture(f"{selected_column}.png", left, top, width=Inches(8), height=Inches(6))
 
-            # 显示数据描述
-            description = sixth_row[list(fourth_row).index(selected_column)]
-            slide.placeholders[1].text = f"数据描述：{description}"
+                # 显示数据描述
+                description = sixth_row[list(fourth_row).index(selected_column)]
+                slide.placeholders[1].text = f"数据描述：{description}"
+            except Exception as e:
+                st.error(f"插入图片 {selected_column}.png 到 PPT 失败: {e}")
 
-        prs.save("charts.pptx")
-        st.success("图表已保存到 charts.pptx")
+        try:
+            prs.save("charts.pptx")
+            st.success("图表已保存到 charts.pptx")
+        except Exception as e:
+            st.error(f"保存 PPT 失败: {e}")
     else:
         for selected_column in selected_columns:
             if chart_type == "季节性图表":
@@ -259,4 +272,3 @@ with col2:
             # 显示数据描述
             description = sixth_row[list(fourth_row).index(selected_column)]
             st.markdown(f"<small>数据描述：{description}</small>", unsafe_allow_html=True)
-    
