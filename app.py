@@ -5,11 +5,10 @@ import streamlit as st
 import pandas as pd
 import os
 import math
-from pptx import Presentation
-from pptx.util import Inches
-import io
 from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
+import time
 
 # 定义颜色，使用对比度大且亮度不高的颜色
 line_colors = ['#8B0000', '#006400', '#00008B', '#8B8B00', '#8B008B', '#008B8B', '#FF8C00', '#4B0082']
@@ -198,13 +197,32 @@ def create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_ro
         )
     return line
 
-# 新增 HTML 转 PNG 函数
-def html_to_png(html_path, png_path):
-    driver = webdriver.Chrome(ChromeDriverManager().install())
-    driver.get(f"file://{os.path.abspath(html_path)}")
-    driver.set_window_size(1000, 800)
-    driver.save_screenshot(png_path)
-    driver.quit()
+# HTML 转 PNG 函数
+def html_to_png(html_content, output_path):
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service)
+    try:
+        # 将 HTML 内容保存为临时文件
+        temp_html_path = "temp_chart.html"
+        with open(temp_html_path, "w", encoding="utf-8") as f:
+            f.write(html_content)
+
+        # 打开临时 HTML 文件
+        driver.get(f"file:///{os.path.abspath(temp_html_path)}")
+
+        # 等待页面加载完成
+        time.sleep(5)
+
+        # 保存为 PNG
+        driver.save_screenshot(output_path)
+    except Exception as e:
+        print(f"Error converting HTML to PNG: {e}")
+    finally:
+        # 关闭浏览器
+        driver.quit()
+        # 删除临时 HTML 文件
+        if os.path.exists(temp_html_path):
+            os.remove(temp_html_path)
 
 with col1:
     # 选择 Sheet 名
@@ -232,62 +250,20 @@ with col1:
         year_range_options = ["5年", "8年", "全部"]
         selected_year_range = st.selectbox("选择展示的年份范围", year_range_options, index=0)
 
-    # 导出 PPT 按钮
-    if st.button("导出选中图表到 PPT"):
-        prs = Presentation()
-        for selected_column in selected_columns:
-            if chart_type == "季节性图表":
-                chart = create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_row, selected_year_range)
-            else:
-                chart = create_time_series_chart(df, date_column, selected_column)
-
-            # 保存图表为 HTML 文件
-            html_path = f"{selected_column}.html"
-            chart.render(html_path)
-
-            # 将 HTML 转换为 PNG
-            png_path = f"{selected_column}.png"
-            html_to_png(html_path, png_path)
-
-            # 创建新的幻灯片
-            slide = prs.slides.add_slide(prs.slide_layouts[1])
-            title = slide.shapes.title
-            body_shape = slide.shapes.placeholders[1]
-
-            # 设置幻灯片标题
-            title.text = f"{selected_column} {chart_type}"
-
-            # 添加图表图片到幻灯片
-            left = Inches(1)
-            top = Inches(1.5)
-            pic = slide.shapes.add_picture(png_path, left, top, width=Inches(8), height=Inches(6))
-
-            # 显示数据描述
-            description = sixth_row[list(fourth_row).index(selected_column)]
-            tf = body_shape.text_frame
-            tf.text = f"数据描述：{description}"
-
-        # 保存 PPT 文件
-        buffer = io.BytesIO()
-        prs.save(buffer)
-        buffer.seek(0)
-
-        # 提供下载链接
-        st.download_button(
-            label="下载 PPT",
-            data=buffer,
-            file_name="charts.pptx",
-            mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
-        )
-
 with col2:
     for selected_column in selected_columns:
         if chart_type == "季节性图表":
             chart = create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_row, selected_year_range)
         else:
             chart = create_time_series_chart(df, date_column, selected_column)
-        st.components.v1.html(chart.render_embed(), height=800)
+        html_content = chart.render_embed()
+        st.components.v1.html(html_content, height=800)
 
         # 显示数据描述
         description = sixth_row[list(fourth_row).index(selected_column)]
         st.markdown(f"<small>数据描述：{description}</small>", unsafe_allow_html=True)
+
+        # 转换为 PNG
+        output_path = f"{selected_column}_{chart_type}.png"
+        html_to_png(html_content, output_path)
+        st.success(f"已将 {selected_column} 的 {chart_type} 转换为 PNG: {output_path}")
