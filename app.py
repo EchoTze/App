@@ -94,7 +94,7 @@ def create_time_series_chart(df, date_column, selected_column):
     y_min, y_max, interval = calculate_yaxis_limits(single_df[selected_column])
 
     line = (
-        Line(init_opts=opts.InitOpts(theme=ThemeType.WHITE, width="1000px", height="800px"))  # 修改为 ThemeType.WHITE
+        Line(init_opts=opts.InitOpts(theme=ThemeType.LIGHT, width="1000px", height="800px", bg_color="white"))  # 明确设置背景颜色
         .add_xaxis(single_df[date_column].dt.strftime('%Y-%m-%d').tolist())
         .add_yaxis(selected_column, single_df[selected_column].tolist(), is_smooth=True,
                    label_opts=opts.LabelOpts(is_show=False))
@@ -153,7 +153,7 @@ def create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_ro
     y_min, y_max, interval = calculate_yaxis_limits(pd.Series(all_y_values))
 
     line = (
-        Line(init_opts=opts.InitOpts(theme=ThemeType.WHITE, width="1000px", height="800px"))  # 修改为 ThemeType.WHITE
+        Line(init_opts=opts.InitOpts(theme=ThemeType.LIGHT, width="1000px", height="800px", bg_color="white"))  # 明确设置背景颜色
         .set_global_opts(
             title_opts=opts.TitleOpts(title=f"{selected_column} 季节性图表"),
             toolbox_opts=opts.ToolboxOpts(is_show=True),
@@ -230,4 +230,4 @@ with col2:
         # 显示数据描述
         description = sixth_row[list(fourth_row).index(selected_column)]
         st.markdown(f"<small>数据描述：{description}</small>", unsafe_allow_html=True)
-    
+
