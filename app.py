@@ -9,8 +9,8 @@ import math
 # 定义颜色，使用对比度大且亮度不高的颜色
 line_colors = ['#8B0000', '#006400', '#00008B', '#8B8B00', '#8B008B', '#008B8B', '#FF8C00', '#4B0082']
 
-# 缓存 Excel 文件读取
-@st.cache_data
+# 缓存 Excel 文件读取，使用 st.cache_resource
+@st.cache_resource
 def read_excel_file():
     file_path = os.path.join(os.path.dirname(__file__), '沥青数据豆包3.xlsx')
     excel_file = pd.ExcelFile(file_path)
@@ -115,10 +115,16 @@ def create_time_series_chart(df, date_column, selected_column):
 
 # 缓存季节性图表函数
 @st.cache_data
-def create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_row, selected_year_range):
+def create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_row):
     single_df = df[[date_column, selected_column]].dropna()
     single_df['年份'] = single_df[date_column].dt.year.astype(int)
     years = sorted(single_df['年份'].unique(), reverse=True)
+
+    custom_colors = ['#FF0000', '#000000', '#0000FF', '#00FF00', '#800080', '#FFA500']
+
+    # 新增：选择年份范围
+    year_range_options = ["5年", "8年", "全部"]
+    selected_year_range = st.selectbox("选择展示的年份范围", year_range_options, index=0)
 
     if selected_year_range == "5年":
         years = years[:5]
@@ -168,7 +174,6 @@ def create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_ro
         )
     )
 
-    custom_colors = ['#FF0000', '#000000', '#0000FF', '#00FF00', '#800080', '#FFA500']
     for i, year in enumerate(years):
         if '日' in fifth_row[list(fourth_row).index(selected_column)]:
             year_data = single_df[(single_df['年份'] == year)].groupby('日序')[selected_column].mean()
@@ -214,14 +219,9 @@ with col1:
     # 选择图表类型
     chart_type = st.selectbox(f"选择 {selected_sheet} 的图表类型", ["时间序列图", "季节性图表"])
 
-    if chart_type == "季节性图表":
-        # 新增：选择年份范围
-        year_range_options = ["5年", "8年", "全部"]
-        selected_year_range = st.selectbox("选择展示的年份范围", year_range_options, index=0)
-
 with col2:
     if chart_type == "季节性图表":
-        chart = create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_row, selected_year_range)
+        chart = create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_row)
     else:
         chart = create_time_series_chart(df, date_column, selected_column)
     st.components.v1.html(chart.render_embed(), height=800)
@@ -229,4 +229,3 @@ with col2:
     # 显示数据描述
     description = sixth_row[list(fourth_row).index(selected_column)]
     st.markdown(f"<small>数据描述：{description}</small>", unsafe_allow_html=True)
-    
