@@ -1,19 +1,10 @@
-import streamlit as st
-# 确保 st.set_page_config() 是第一个 Streamlit 命令
-st.set_page_config(layout="wide")
-
 from pyecharts import options as opts
 from pyecharts.charts import Line
 from pyecharts.globals import ThemeType
+import streamlit as st
 import pandas as pd
 import os
 import math
-from pptx import Presentation
-from pptx.util import Inches
-from PIL import Image
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-import time
 
 # 定义颜色，使用对比度大且亮度不高的颜色
 line_colors = ['#8B0000', '#006400', '#00008B', '#8B8B00', '#8B008B', '#008B8B', '#FF8C00', '#4B0082']
@@ -30,6 +21,8 @@ excel_file = read_excel_file()
 # 获取所有表名
 sheet_names = excel_file.sheet_names
 
+# Streamlit 布局
+st.set_page_config(layout="wide")
 col1, col2 = st.columns([1, 3])
 
 # 缓存数据处理函数
@@ -200,19 +193,6 @@ def create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_ro
         )
     return line
 
-# 新增函数，将 HTML 转换为 JPG
-def html_to_jpg(html_path, jpg_path):
-    # 替换为你的 ChromeDriver 路径
-    service = Service('/path/to/chromedriver')  # 例如：Service('./chromedriver')
-    driver = webdriver.Chrome(service=service)
-    driver.get(f'file://{html_path}')
-    time.sleep(5)  # 等待页面加载
-    driver.save_screenshot(jpg_path)
-    driver.quit()
-    img = Image.open(jpg_path)
-    img = img.convert('RGB')
-    img.save(jpg_path)
-
 with col1:
     # 选择 Sheet 名
     selected_sheet = st.selectbox("选择 Sheet 名", sheet_names)
@@ -239,65 +219,14 @@ with col1:
         year_range_options = ["5年", "8年", "全部"]
         selected_year_range = st.selectbox("选择展示的年份范围", year_range_options, index=0)
 
-    # 新增：保存到 PPT 按钮
-    save_to_ppt = st.button("保存到 PPT")
-
 with col2:
-    if save_to_ppt:
-        prs = Presentation()
-        for selected_column in selected_columns:
-            if chart_type == "季节性图表":
-                chart = create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_row, selected_year_range)
-            else:
-                chart = create_time_series_chart(df, date_column, selected_column)
-            try:
-                html_path = f"{selected_column}.html"
-                jpg_path = f"{selected_column}.jpg"
-                chart.render(html_path)
-                html_to_jpg(html_path, jpg_path)
-                if not os.path.exists(jpg_path):
-                    st.error(f"图片 {jpg_path} 保存失败，文件未找到。")
-                    continue
-                # 检查文件权限
-                if not os.access(jpg_path, os.R_OK):
-                    st.error(f"没有权限读取图片 {jpg_path}。")
-                    continue
-                # 检查图片文件是否有效
-                img = Image.open(jpg_path)
-                img.verify()
-                st.info(f"图片 {jpg_path} 保存成功，文件大小: {os.path.getsize(jpg_path)} 字节。")
-            except Exception as e:
-                st.error(f"保存或检查图片 {jpg_path} 失败: {e}")
-                continue
+    for selected_column in selected_columns:
+        if chart_type == "季节性图表":
+            chart = create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_row, selected_year_range)
+        else:
+            chart = create_time_series_chart(df, date_column, selected_column)
+        st.components.v1.html(chart.render_embed(), height=800)
 
-            try:
-                slide = prs.slides.add_slide(prs.slide_layouts[5])
-                title = slide.shapes.title
-                title.text = f"{selected_column} 图表"
-                left = Inches(1)
-                top = Inches(2)
-                pic = slide.shapes.add_picture(jpg_path, left, top, width=Inches(8), height=Inches(6))
-
-                # 显示数据描述
-                description = sixth_row[list(fourth_row).index(selected_column)]
-                slide.placeholders[1].text = f"数据描述：{description}"
-            except Exception as e:
-                st.error(f"插入图片 {jpg_path} 到 PPT 失败: {e}，请检查图片是否损坏、路径是否正确或库的兼容性。")
-
-        try:
-            prs.save("charts.pptx")
-            st.success("图表已保存到 charts.pptx")
-        except Exception as e:
-            st.error(f"保存 PPT 失败: {e}，请检查磁盘空间是否充足。")
-    else:
-        for selected_column in selected_columns:
-            if chart_type == "季节性图表":
-                chart = create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_row, selected_year_range)
-            else:
-                chart = create_time_series_chart(df, date_column, selected_column)
-            st.components.v1.html(chart.render_embed(), height=800)
-
-            # 显示数据描述
-            description = sixth_row[list(fourth_row).index(selected_column)]
-            st.markdown(f"<small>数据描述：{description}</small>", unsafe_allow_html=True)
-    
+        # 显示数据描述
+        description = sixth_row[list(fourth_row).index(selected_column)]
+        st.markdown(f"<small>数据描述：{description}</small>", unsafe_allow_html=True)
