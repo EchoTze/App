@@ -94,12 +94,12 @@ def create_time_series_chart(df, date_column, selected_column):
     y_min, y_max, interval = calculate_yaxis_limits(single_df[selected_column])
 
     line = (
-        Line(init_opts=opts.InitOpts(theme=ThemeType.LIGHT, width="1000px", height="800px", bg_color="white"))  # 明确设置背景颜色
+        Line(init_opts=opts.InitOpts(theme=ThemeType.LIGHT, width="1000px", height="800px"))
         .add_xaxis(single_df[date_column].dt.strftime('%Y-%m-%d').tolist())
         .add_yaxis(selected_column, single_df[selected_column].tolist(), is_smooth=True,
                    label_opts=opts.LabelOpts(is_show=False))
         .set_global_opts(
-            title_opts=opts.TitleOpts(title=f"{selected_column} 时间序列图"),
+            title_opts=opts.TitleOpts(title=f"{selected_column} 时间序列图", textstyle_opts=opts.TextStyleOpts(font_size=20)),
             toolbox_opts=opts.ToolboxOpts(is_show=True),
             xaxis_opts=opts.AxisOpts(name="日期"),
             yaxis_opts=opts.AxisOpts(
@@ -108,7 +108,9 @@ def create_time_series_chart(df, date_column, selected_column):
                 max_=y_max,
                 interval=interval
             ),
-            datazoom_opts=[opts.DataZoomOpts(type_="slider", xaxis_index=0, range_start=0, range_end=100)]
+            datazoom_opts=[opts.DataZoomOpts(type_="slider", xaxis_index=0, range_start=0, range_end=100)],
+            legend_opts=opts.LegendOpts(is_show=True, type_="scroll", pos_bottom="1%", pos_left="center",
+                                        textstyle_opts=opts.TextStyleOpts(font_size=20))
         )
     )
     return line
@@ -153,9 +155,9 @@ def create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_ro
     y_min, y_max, interval = calculate_yaxis_limits(pd.Series(all_y_values))
 
     line = (
-        Line(init_opts=opts.InitOpts(theme=ThemeType.LIGHT, width="1000px", height="800px", bg_color="white"))  # 明确设置背景颜色
+        Line(init_opts=opts.InitOpts(theme=ThemeType.LIGHT, width="1000px", height="800px"))
         .set_global_opts(
-            title_opts=opts.TitleOpts(title=f"{selected_column} 季节性图表"),
+            title_opts=opts.TitleOpts(title=f"{selected_column} 季节性图表", textstyle_opts=opts.TextStyleOpts(font_size=20)),
             toolbox_opts=opts.ToolboxOpts(is_show=True),
             xaxis_opts=opts.AxisOpts(name=x_axis_name),
             yaxis_opts=opts.AxisOpts(
@@ -164,7 +166,8 @@ def create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_ro
                 max_=y_max,
                 interval=interval
             ),
-            legend_opts=opts.LegendOpts(is_show=True, type_="scroll", pos_bottom="1%", pos_left="center")
+            legend_opts=opts.LegendOpts(is_show=True, type_="scroll", pos_bottom="1%", pos_left="center",
+                                        textstyle_opts=opts.TextStyleOpts(font_size=20))
         )
     )
 
@@ -230,4 +233,3 @@ with col2:
         # 显示数据描述
         description = sixth_row[list(fourth_row).index(selected_column)]
         st.markdown(f"<small>数据描述：{description}</small>", unsafe_allow_html=True)
-
