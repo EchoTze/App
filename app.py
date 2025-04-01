@@ -10,7 +10,10 @@ import os
 import math
 from pptx import Presentation
 from pptx.util import Inches
-from PIL import Image  # 导入 Pillow 库
+from PIL import Image
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+import time
 
 # 定义颜色，使用对比度大且亮度不高的颜色
 line_colors = ['#8B0000', '#006400', '#00008B', '#8B8B00', '#8B008B', '#008B8B', '#FF8C00', '#4B0082']
@@ -197,6 +200,18 @@ def create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_ro
         )
     return line
 
+# 新增函数，将 HTML 转换为 JPG
+def html_to_jpg(html_path, jpg_path):
+    service = Service('path/to/chromedriver')  # 请替换为你的 ChromeDriver 路径
+    driver = webdriver.Chrome(service=service)
+    driver.get(f'file://{html_path}')
+    time.sleep(5)  # 等待页面加载
+    driver.save_screenshot(jpg_path)
+    driver.quit()
+    img = Image.open(jpg_path)
+    img = img.convert('RGB')
+    img.save(jpg_path)
+
 with col1:
     # 选择 Sheet 名
     selected_sheet = st.selectbox("选择 Sheet 名", sheet_names)
@@ -235,21 +250,23 @@ with col2:
             else:
                 chart = create_time_series_chart(df, date_column, selected_column)
             try:
-                image_path = os.path.abspath(f"{selected_column}.png")
-                chart.render(image_path)
-                if not os.path.exists(image_path):
-                    st.error(f"图片 {image_path} 保存失败，文件未找到。")
+                html_path = f"{selected_column}.html"
+                jpg_path = f"{selected_column}.jpg"
+                chart.render(html_path)
+                html_to_jpg(html_path, jpg_path)
+                if not os.path.exists(jpg_path):
+                    st.error(f"图片 {jpg_path} 保存失败，文件未找到。")
                     continue
                 # 检查文件权限
-                if not os.access(image_path, os.R_OK):
-                    st.error(f"没有权限读取图片 {image_path}。")
+                if not os.access(jpg_path, os.R_OK):
+                    st.error(f"没有权限读取图片 {jpg_path}。")
                     continue
                 # 检查图片文件是否有效
-                img = Image.open(image_path)
+                img = Image.open(jpg_path)
                 img.verify()
-                st.info(f"图片 {image_path} 保存成功，文件大小: {os.path.getsize(image_path)} 字节。")
+                st.info(f"图片 {jpg_path} 保存成功，文件大小: {os.path.getsize(jpg_path)} 字节。")
             except Exception as e:
-                st.error(f"保存或检查图片 {image_path} 失败: {e}")
+                st.error(f"保存或检查图片 {jpg_path} 失败: {e}")
                 continue
 
             try:
@@ -258,13 +275,13 @@ with col2:
                 title.text = f"{selected_column} 图表"
                 left = Inches(1)
                 top = Inches(2)
-                pic = slide.shapes.add_picture(image_path, left, top, width=Inches(8), height=Inches(6))
+                pic = slide.shapes.add_picture(jpg_path, left, top, width=Inches(8), height=Inches(6))
 
                 # 显示数据描述
                 description = sixth_row[list(fourth_row).index(selected_column)]
                 slide.placeholders[1].text = f"数据描述：{description}"
             except Exception as e:
-                st.error(f"插入图片 {image_path} 到 PPT 失败: {e}，请检查图片是否损坏、路径是否正确或库的兼容性。")
+                st.error(f"插入图片 {jpg_path} 到 PPT 失败: {e}，请检查图片是否损坏、路径是否正确或库的兼容性。")
 
         try:
             prs.save("charts.pptx")
