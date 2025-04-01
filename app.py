@@ -206,10 +206,10 @@ with col1:
     available_labels2 = [label[1] for col, label in category_mapping.items() if label[0] == selected_category1]
     selected_category2 = st.selectbox(f"选择 {selected_sheet} 的第二行细分标签", set(available_labels2))
 
-    # 根据前两个选择筛选指标名称
+    # 根据前两个选择筛选指标名称，使用 st.multiselect 支持多选
     available_columns = [col for col, label in category_mapping.items() if
                          label[0] == selected_category1 and label[1] == selected_category2]
-    selected_column = st.selectbox(f"选择 {selected_sheet} 的指标名称", available_columns)
+    selected_columns = st.multiselect(f"选择 {selected_sheet} 的指标名称", available_columns)
 
     # 选择图表类型
     chart_type = st.selectbox(f"选择 {selected_sheet} 的图表类型", ["时间序列图", "季节性图表"])
@@ -220,13 +220,15 @@ with col1:
         selected_year_range = st.selectbox("选择展示的年份范围", year_range_options, index=0)
 
 with col2:
-    if chart_type == "季节性图表":
-        chart = create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_row, selected_year_range)
-    else:
-        chart = create_time_series_chart(df, date_column, selected_column)
-    st.components.v1.html(chart.render_embed(), height=800)
+    for selected_column in selected_columns:
+        if chart_type == "季节性图表":
+            chart = create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_row, selected_year_range)
+        else:
+            chart = create_time_series_chart(df, date_column, selected_column)
+        st.components.v1.html(chart.render_embed(), height=800)
 
-    # 显示数据描述
-    description = sixth_row[list(fourth_row).index(selected_column)]
-    st.markdown(f"<small>数据描述：{description}</small>", unsafe_allow_html=True)
+        # 显示数据描述
+        description = sixth_row[list(fourth_row).index(selected_column)]
+        st.markdown(f"<small>数据描述：{description}</small>", unsafe_allow_html=True)
+
     
