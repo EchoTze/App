@@ -7,4 +7,4 @@ selenium
 pillow
 pptx
 io
-webdriver_manager.chrome
+webdriver_manager
