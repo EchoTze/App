@@ -1,7 +1,12 @@
+import streamlit as st
+print("Before st.set_page_config()")
+st.set_page_config(layout="wide")
+print("After st.set_page_config()")
+
+# 后续代码保持不变
 from pyecharts import options as opts
 from pyecharts.charts import Line
 from pyecharts.globals import ThemeType
-import streamlit as st
 import pandas as pd
 import os
 import math
