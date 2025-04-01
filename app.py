@@ -5,7 +5,6 @@ import streamlit as st
 import pandas as pd
 import os
 import math
-import tempfile  # 新增导入，用于临时文件操作
 
 # 定义颜色，使用对比度大且亮度不高的颜色
 line_colors = ['#8B0000', '#006400', '#00008B', '#8B8B00', '#8B008B', '#008B8B', '#FF8C00', '#4B0082']
@@ -226,20 +225,10 @@ with col2:
             chart = create_seasonal_chart(df, date_column, selected_column, fourth_row, fifth_row, selected_year_range)
         else:
             chart = create_time_series_chart(df, date_column, selected_column)
-
-        # 创建临时文件
-        temp_file = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
-        temp_file.close()
-
-        # 保存图片，指定主题
-        chart.render(path=temp_file.name, theme=ThemeType.LIGHT)
-
-        # 显示图片
-        st.image(temp_file.name, caption=f"{selected_column} 图表", use_column_width=True)
-
-        # 删除临时文件
-        os.remove(temp_file.name)
+        st.components.v1.html(chart.render_embed(), height=800)
 
         # 显示数据描述
         description = sixth_row[list(fourth_row).index(selected_column)]
         st.markdown(f"<small>数据描述：{description}</small>", unsafe_allow_html=True)
+
+    
